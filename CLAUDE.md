@@ -21,19 +21,19 @@ Target: under ~10 lines per turn unless the user asks for detail.
 
 ## Stack
 
-- `apps/api` — FastAPI, SQLAlchemy, Alembic, Python 3.11 (venv at `apps/api/.venv`)
-- `apps/web` — Next.js 16, React 19, Tailwind 4. Read `apps/web/AGENTS.md` first;
+- `backend` — FastAPI, SQLAlchemy, Alembic, Python 3.11 (venv at `backend/.venv`)
+- `frontend` — Next.js 16, React 19, Tailwind 4. Read `frontend/AGENTS.md` first;
   Next 16 has breaking changes from v15.
-- `infra/docker-compose.yml` — Postgres 16 + pgvector, Redis 7, MinIO
+- `infra/docker/docker-compose.yml` — Postgres 16 + pgvector, Redis 7, MinIO
 
 ## Local setup
 
 ```sh
 cp .env.example .env                                     # then fill ANTHROPIC_API_KEY
-docker compose --env-file .env -f infra/docker-compose.yml up -d
-cd apps/api && .venv/bin/alembic upgrade head
+docker compose --env-file .env -f infra/docker/docker-compose.yml up -d
+cd backend && .venv/bin/alembic upgrade head
 .venv/bin/uvicorn app.main:app --reload                  # :8000
-cd apps/web && npm run dev                               # :3000
+cd frontend && npm run dev                               # :3000
 ```
 
 ## Gotchas
@@ -47,4 +47,4 @@ cd apps/web && npm run dev                               # :3000
 - Use `bcrypt` directly, not `passlib` — passlib is unmaintained and breaks
   against bcrypt 4.x.
 - pgvector's Alembic autogenerate omits its own import; the migration template
-  in `apps/api/alembic/script.py.mako` adds it back.
+  in `backend/alembic/script.py.mako` adds it back.
