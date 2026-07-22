@@ -16,6 +16,9 @@ class Settings(BaseSettings):
 
     environment: Literal["development", "staging", "production"] = "development"
     log_level: str = "INFO"
+    # Echo every SQL statement. Off by default — it floods logs; opt in when
+    # debugging queries.
+    sql_echo: bool = False
 
     api_host: str = "0.0.0.0"
     api_port: int = 8000
