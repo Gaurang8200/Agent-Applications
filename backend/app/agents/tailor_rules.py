@@ -97,6 +97,18 @@ def validate_anschreiben(
 ) -> list[RuleViolation]:
     violations = _scan_text(anschreiben.body, constraints, "anschreiben")
 
+    if constraints.anschreiben_paragraphs is not None:
+        got = len(anschreiben.paragraphs)
+        if got != constraints.anschreiben_paragraphs:
+            violations.append(
+                RuleViolation(
+                    location="anschreiben",
+                    rule="paragraph_count",
+                    detail=f"Expected exactly {constraints.anschreiben_paragraphs} "
+                    f"paragraphs separated by blank lines, got {got}",
+                )
+            )
+
     words = len(_WORD.findall(anschreiben.body))
     if sample_word_count:
         # Never longer than the sample; within tolerance below it.
