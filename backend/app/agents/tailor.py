@@ -199,7 +199,7 @@ def _assemble(
                 location=exp.location,
                 start_date=exp.start_date.isoformat() if exp.start_date else None,
                 end_date=exp.end_date.isoformat() if exp.end_date else None,
-                is_current=exp.is_current,
+                is_current=bool(exp.is_current),
                 bullets=bullets_by_index.get(index, []),
             )
         )
