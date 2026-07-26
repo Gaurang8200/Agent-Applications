@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @page {
+        size: A4;
+        margin: 2cm 2cm;
+      }
+      body {
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 11pt;
+        line-height: 1.4;
+        color: #1a1a1a;
+        margin: 0;
+      }
+      .sender {
+        font-size: 9pt;
+        color: #555;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 6pt;
+        margin-bottom: 16pt;
+      }
+      .sender .name {
+        font-size: 12pt;
+        color: #1a1a1a;
+        font-weight: 600;
+      }
+      .meta {
+        margin-bottom: 16pt;
+      }
+      .body p {
+        margin: 0 0 10pt;
+        text-align: justify;
+      }
+      .closing {
+        margin-top: 16pt;
+      }
+      .closing .name {
+        margin-top: 4pt;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sender">
+      <div class="name">{{ contact.name }}</div>
+      {% if contact.line %}<div>{{ contact.line }}</div>{% endif %}
+    </div>
+
+    {% if company %}
+    <div class="meta">{{ company }}</div>
+    {% endif %}
+
+    <div class="body">
+      {% for para in paragraphs %}<p>{{ para }}</p>{% endfor %}
+    </div>
+
+    <div class="closing">
+      <div>Mit freundlichen Grüßen</div>
+      <div class="name">{{ contact.name }}</div>
+    </div>
+  </body>
+</html>
