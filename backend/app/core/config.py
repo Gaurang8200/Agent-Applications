@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-opus-4-8"
 
+    # Where generated application PDFs are saved locally, one folder per company.
+    applications_dir: str = "~/AgentApplications"
+
     jwt_secret: str = Field(min_length=32)
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
@@ -49,6 +52,12 @@ class Settings(BaseSettings):
     @property
     def llm_enabled(self) -> bool:
         return bool(self.anthropic_api_key)
+
+    @property
+    def applications_path(self) -> "Path":
+        from pathlib import Path
+
+        return Path(self.applications_dir).expanduser()
 
     @field_validator("database_url")
     @classmethod

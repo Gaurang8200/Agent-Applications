@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @page {
+        size: A4;
+        margin: 1.4cm 1.5cm;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 10.3pt;
+        line-height: 1.28;
+        color: #1a1a1a;
+        margin: 0;
+      }
+      header {
+        border-bottom: 2px solid #222;
+        padding-bottom: 6pt;
+        margin-bottom: 8pt;
+      }
+      h1 {
+        font-size: 20pt;
+        margin: 0;
+        letter-spacing: 0.3px;
+      }
+      .headline {
+        font-size: 10.5pt;
+        color: #444;
+        margin: 2pt 0 0;
+      }
+      .contact {
+        font-size: 8.8pt;
+        color: #555;
+        margin: 4pt 0 0;
+      }
+      h2 {
+        font-size: 10.5pt;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        border-bottom: 1px solid #bbb;
+        padding-bottom: 2pt;
+        margin: 11pt 0 5pt;
+      }
+      .summary {
+        margin: 0 0 2pt;
+      }
+      .skills {
+        margin: 0;
+        color: #333;
+      }
+      .exp {
+        margin-bottom: 7pt;
+      }
+      .exp-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .role {
+        font-weight: 600;
+      }
+      .dates {
+        color: #666;
+        font-size: 8.8pt;
+        white-space: nowrap;
+        padding-left: 10pt;
+      }
+      ul {
+        margin: 3pt 0 0;
+        padding-left: 14pt;
+      }
+      li {
+        margin: 1.5pt 0;
+      }
+      .edu {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 3pt;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>{{ contact.name }}</h1>
+      {% if cv.headline %}<p class="headline">{{ cv.headline }}</p>{% endif %}
+      {% if contact.line %}<p class="contact">{{ contact.line }}</p>{% endif %}
+    </header>
+
+    {% if cv.summary %}
+    <section>
+      <p class="summary">{{ cv.summary }}</p>
+    </section>
+    {% endif %}
+
+    {% if cv.skills %}
+    <section>
+      <h2>Skills</h2>
+      <p class="skills">{{ cv.skills | join("  ·  ") }}</p>
+    </section>
+    {% endif %}
+
+    <section>
+      <h2>Experience</h2>
+      {% for e in cv.experiences %}
+      <div class="exp">
+        <div class="exp-head">
+          <span class="role">{{ e.title }}, {{ e.company }}</span>
+          <span class="dates">{{ e.dates }}</span>
+        </div>
+        <ul>
+          {% for b in e.bullets %}<li>{{ b }}</li>{% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+    </section>
+
+    {% if education %}
+    <section>
+      <h2>Education</h2>
+      {% for ed in education %}
+      <div class="edu">
+        <span>{{ ed.line }}</span>
+        <span class="dates">{{ ed.dates }}</span>
+      </div>
+      {% endfor %}
+    </section>
+    {% endif %}
+  </body>
+</html>

@@ -48,3 +48,8 @@ cd frontend && npm run dev                               # :3000
   against bcrypt 4.x.
 - pgvector's Alembic autogenerate omits its own import; the migration template
   in `backend/alembic/script.py.mako` adds it back.
+- **PDF rendering (WeasyPrint) needs native libs.** On macOS: `brew install
+  pango`, and run the API via `backend/run-dev.sh` (sets
+  `DYLD_FALLBACK_LIBRARY_PATH` so the linker finds pango/cairo). Plain
+  `uvicorn` will fail to import weasyprint. Linux/Docker resolves the libs
+  normally.

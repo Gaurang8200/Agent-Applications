@@ -10,9 +10,9 @@
     },
     {
       "name": "api",
-      "runtimeExecutable": "backend/.venv/bin/uvicorn",
-      "runtimeArgs": ["app.main:app", "--reload", "--port", "8000"],
-      "cwd": "backend",
+      "runtimeExecutable": "backend/run-dev.sh",
+      "runtimeArgs": ["--reload", "--port", "8000"],
+      "cwd": ".",
       "port": 8000
     }
   ]
