@@ -29,41 +29,52 @@ docker build -t agentapp-web frontend/
 
 CI/CD (GitHub Actions) to be added once the first deploy target is chosen.
 
+## Running it (local, indefinitely)
 
-## Running it for real (free)
-
-The agent runs on your own machine and is reached through a Cloudflare Quick
-Tunnel. Nothing here costs money, and the only tradeoff is that the agent is
-reachable while the machine is awake.
+The agent runs on this machine. Nothing is exposed publicly and no hosting is
+involved, so there is nothing to pay for and no tunnel to maintain.
 
 ```sh
-./deployment/start-agent.sh
+./deployment/run-local.sh
 ```
 
-That brings up Postgres, Redis, and MinIO, applies migrations, starts the API
-and the web app, and opens a tunnel to each. It prints two URLs; the web one is
-what you open, and what you put behind the button on the portfolio site
-(`VITE_AGENT_APP_URL` in that project).
+That brings up Postgres, Redis, and MinIO, applies migrations, and starts the
+API and web app. Open <http://localhost:3000>.
 
-Two things worth understanding:
+With `AUTOPILOT_ENABLED=true` the API runs the pipeline on its own interval:
+discover new German postings, score them, and prepare tailored documents for
+the best matches. Every application stops at `ready_for_review`; submitting is
+a human action, always.
 
-**The hostnames change every run.** A Quick Tunnel mints a throwaway
-`*.trycloudflare.com` name each time. For a stable address you need a named
-tunnel, which requires a domain on Cloudflare — the same domain that serves the
-portfolio site would do.
+Documents land in `~/AgentApplications/<Company>/` as both `.docx` and `.pdf`.
 
-**A tunnel URL is public.** Anyone holding the link reaches the app, so access
-control is what keeps it yours: `ALLOWED_EMAILS` in `.env` must list your
-address before you share the link. Registration and sign-in both refuse
-everything else.
+### Keeping it alive around the clock
 
-The autonomous loop is off by default because it spends API budget. Turn it on
-with `AUTOPILOT_ENABLED=true`; it will discover, score, and prepare documents
-on an interval, and stop at `ready_for_review` every time.
+The loop only runs while the machine is awake, so stop it sleeping:
+
+```sh
+caffeinate -dimsu
+```
+
+Leave that running in its own terminal. Closing the lid still suspends the
+machine unless it is on power with an external display, so keep the lid open
+for an unattended overnight run.
+
+### Tuning the loop
+
+| Setting | Effect |
+|---|---|
+| `AUTOPILOT_INTERVAL_MINUTES` | How often a cycle runs. 180 is a reasonable default; postings do not appear faster than that. |
+| `AUTOPILOT_MIN_SCORE` | Minimum judged fit before documents are prepared. Lower it for more applications, raise it for better ones. |
+| `AUTOPILOT_PREPARE_LIMIT` | Applications prepared per cycle. Each one costs a tailoring call, so this is the main cost control. |
+| `AUTOPILOT_SCORE_LIMIT` | Postings scored per cycle. |
+
+`GET /api/v1/autopilot/status` reports what recent cycles did, including
+failures. `POST /api/v1/autopilot/run` triggers one immediately.
 
 ## Why not serverless
 
-The API needs LibreOffice to render the tailored `.docx` into PDF, and the
-autonomous loop needs a process that stays alive between requests. Neither fits
-a serverless platform's size limits or execution model, which is why the
-frontend can live on Vercel but the backend cannot.
+The API needs LibreOffice to render the tailored `.docx` into PDF, and the loop
+needs a process that stays alive between requests. Neither fits a serverless
+platform's size limits or execution model. If this is ever hosted, it needs a
+container host rather than a functions platform.
