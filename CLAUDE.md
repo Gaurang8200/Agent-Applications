@@ -55,6 +55,13 @@ cd frontend && npm run dev                               # :3000
   commonly owns 5432 and silently shadows the container on `localhost`.
 - **Repo lives in iCloud Drive.** If git reports `object file ... is empty`,
   that's iCloud eviction — re-clone from GitHub. Do not move the folder.
+- **iCloud creates `<name> 2.py` sync duplicates.** They are byte-identical
+  copies that break things quietly: pytest collects them as extra tests, and a
+  duplicated Alembic migration means two files claiming one revision id. Check
+  for them with `find . -name "* 2.*" -not -path "*/node_modules/*"`, diff
+  against the original, and delete.
+- If the venv suddenly throws `PermissionError` on `pyvenv.cfg`, iCloud has
+  locked it. Grant Full Disk Access to the terminal app, then rebuild the venv.
 - **No `ANTHROPIC_API_KEY`** means resume parsing falls back to regex, which
   extracts contact details and skills but deliberately no work history.
 - Use `bcrypt` directly, not `passlib` — passlib is unmaintained and breaks
