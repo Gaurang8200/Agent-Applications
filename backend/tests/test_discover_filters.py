@@ -6,6 +6,7 @@ from app.agents.discover.filters import (
     JobFilterConfig,
     evaluate,
     is_excluded_company,
+    is_in_germany,
     is_recent,
     matched_skills,
     matches_role,
@@ -60,7 +61,7 @@ def test_is_recent():
     assert is_recent(None, 7, now=NOW)
 
 
-def _eval(title, company, text, posted_delta_days, skills, **over):
+def _eval(title, company, text, posted_delta_days, skills, location="Berlin", country=None, **over):
     return evaluate(
         title=title,
         company=company,
@@ -69,7 +70,57 @@ def _eval(title, company, text, posted_delta_days, skills, **over):
         skills=skills,
         config=JobFilterConfig(**over),
         now=NOW,
+        location=location,
+        country=country,
     )
+
+
+# --- Germany filter ------------------------------------------------------
+
+
+def test_country_code_decides_when_present():
+    assert is_in_germany(None, "DE")
+    assert is_in_germany("London", "DE")  # explicit country wins over text
+    assert not is_in_germany("Berlin", "AT")
+
+
+def test_german_cities_and_states_recognised():
+    for place in ["Berlin", "München", "Munich, Bavaria", "Frankfurt am Main",
+                  "Hamburg, Germany", "Deutschland", "Nordrhein-Westfalen",
+                  "Ingolstadt", "Stuttgart"]:
+        assert is_in_germany(place, None), place
+
+
+def test_nearby_countries_rejected():
+    for place in ["London", "Vienna, Austria", "Zurich", "Amsterdam",
+                  "Paris, France", "New York", "Remote - UK"]:
+        assert not is_in_germany(place, None), place
+
+
+def test_ambiguous_or_missing_location_rejected():
+    # An unplaceable posting is not worth an application.
+    assert not is_in_germany(None, None)
+    assert not is_in_germany("", None)
+    assert not is_in_germany("Remote", None)
+
+
+def test_german_city_named_inside_a_foreign_location_is_not_matched():
+    # Substring matching would wrongly accept these; word boundaries prevent it.
+    assert not is_in_germany("Hamburg Township, New Jersey, USA", None)
+
+
+def test_evaluate_rejects_non_german_posting():
+    d = _eval("Backend Engineer", "Z", "Python", 1, ["Python"], location="London")
+    assert not d.keep
+    assert "Germany" in d.reason
+
+
+def test_germany_filter_can_be_disabled():
+    d = _eval(
+        "Backend Engineer", "Z", "Python", 1, ["Python"],
+        location="London", germany_only=False,
+    )
+    assert d.keep
 
 
 def test_evaluate_keeps_a_good_posting():

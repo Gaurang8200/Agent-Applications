@@ -6,14 +6,27 @@ is just the count of matched skills — the dedicated Match stage will replace i
 with vector + LLM scoring. status stays "new" for user triage.
 """
 
-from dataclasses import dataclass
+import logging
+from dataclasses import dataclass, field
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agents.discover.filters import JobFilterConfig, evaluate
-from app.agents.discover.sources import ArbeitnowSource, NormalizedPosting
+from app.agents.discover.sources import (
+    ArbeitnowSource,
+    ArbeitsagenturSource,
+    GreenhouseSource,
+    JobSource,
+    LeverSource,
+    NormalizedPosting,
+    SmartRecruitersSource,
+)
+from app.core.config import get_settings
 from app.models import JobPosting, Match, Profile
+
+logger = logging.getLogger(__name__)
+settings = get_settings()
 
 
 @dataclass
@@ -22,6 +35,26 @@ class DiscoverySummary:
     kept: int
     new_postings: int
     new_matches: int
+    # Postings fetched per source, and any source that failed outright.
+    per_source: dict[str, int] = field(default_factory=dict)
+    failed_sources: list[str] = field(default_factory=list)
+
+
+def default_sources() -> list[JobSource]:
+    """The configured source set.
+
+    The federal agency carries volume; the ATS boards carry the large
+    employers that never post to a job board. Company lists are configuration,
+    so adding an employer needs no code change.
+    """
+    sources: list[JobSource] = [ArbeitsagenturSource(), ArbeitnowSource()]
+    if settings.greenhouse_board_list:
+        sources.append(GreenhouseSource(settings.greenhouse_board_list))
+    if settings.lever_handle_list:
+        sources.append(LeverSource(settings.lever_handle_list))
+    if settings.smartrecruiters_company_list:
+        sources.append(SmartRecruitersSource(settings.smartrecruiters_company_list))
+    return sources
 
 
 def _upsert_posting(db: Session, posting: NormalizedPosting) -> tuple[JobPosting, bool]:
@@ -93,16 +126,36 @@ def discover_jobs(
     profile: Profile,
     *,
     config: JobFilterConfig | None = None,
-    source: ArbeitnowSource | None = None,
+    sources: list[JobSource] | None = None,
     max_pages: int = 3,
 ) -> DiscoverySummary:
+    """Fetch from every configured source, filter, and record matches.
+
+    A source that fails is recorded and skipped rather than aborting the run —
+    one retired board token or a rate-limited API should not cost the user the
+    other sources' results.
+    """
     config = config or JobFilterConfig()
-    source = source or ArbeitnowSource()
+    sources = sources if sources is not None else default_sources()
     skills = [s.name for s in profile.skills]
 
-    postings = source.fetch(max_pages=max_pages)
-    kept = new_postings = new_matches = 0
+    postings: list[NormalizedPosting] = []
+    per_source: dict[str, int] = {}
+    failed: list[str] = []
 
+    for source in sources:
+        try:
+            fetched = source.fetch(
+                within_days=config.posted_within_days, max_pages=max_pages
+            )
+        except Exception as exc:  # noqa: BLE001 - isolate per-source failures
+            logger.warning("Source %s failed: %s", source.name, exc)
+            failed.append(source.name)
+            continue
+        per_source[source.name] = len(fetched)
+        postings.extend(fetched)
+
+    kept = new_postings = new_matches = 0
     for posting in postings:
         decision = evaluate(
             title=posting.title,
@@ -111,6 +164,8 @@ def discover_jobs(
             posted_at=posting.posted_at,
             skills=skills,
             config=config,
+            location=posting.location,
+            country=posting.country,
         )
         if not decision.keep:
             continue
@@ -127,4 +182,6 @@ def discover_jobs(
         kept=kept,
         new_postings=new_postings,
         new_matches=new_matches,
+        per_source=per_source,
+        failed_sources=failed,
     )

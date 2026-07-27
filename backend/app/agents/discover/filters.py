@@ -53,6 +53,47 @@ _YEARS_REQUIREMENT = re.compile(
 )
 
 
+# Major German cities and every federal state, used to recognise a German
+# location from free text when a source gives no country code.
+GERMAN_PLACES = {
+    "germany", "deutschland", "allemagne",
+    "baden-württemberg", "baden-wuerttemberg", "bayern", "bavaria", "berlin",
+    "brandenburg", "bremen", "hamburg", "hessen", "hesse",
+    "mecklenburg-vorpommern", "niedersachsen", "lower saxony",
+    "nordrhein-westfalen", "north rhine-westphalia", "nrw",
+    "rheinland-pfalz", "rhineland-palatinate", "saarland", "sachsen", "saxony",
+    "sachsen-anhalt", "saxony-anhalt", "schleswig-holstein", "thüringen",
+    "thuringia",
+    "münchen", "munich", "muenchen", "köln", "cologne", "koeln", "frankfurt",
+    "stuttgart", "düsseldorf", "dusseldorf", "duesseldorf", "dortmund", "essen",
+    "leipzig", "dresden", "hannover", "hanover", "nürnberg", "nuremberg",
+    "nuernberg", "duisburg", "bochum", "wuppertal", "bielefeld", "bonn",
+    "mannheim", "karlsruhe", "wiesbaden", "münster", "muenster", "augsburg",
+    "aachen", "mönchengladbach", "gelsenkirchen", "braunschweig", "kiel",
+    "chemnitz", "halle", "magdeburg", "freiburg", "krefeld", "mainz", "lübeck",
+    "luebeck", "erfurt", "rostock", "kassel", "potsdam", "saarbrücken",
+    "saarbruecken", "heidelberg", "darmstadt", "regensburg", "ingolstadt",
+    "würzburg", "wuerzburg", "wolfsburg", "ulm", "heilbronn", "pforzheim",
+    "göttingen", "goettingen", "bottrop", "reutlingen", "koblenz", "jena",
+    "erlangen", "trier", "siegen", "hildesheim", "salzgitter", "cottbus",
+    "gütersloh", "guetersloh", "kaiserslautern", "schwerin", "esslingen",
+    "ludwigshafen", "oberhausen", "hagen", "hamm", "leverkusen", "solingen",
+    "neuss", "paderborn", "offenbach", "fürth", "fuerth", "remscheid",
+}
+
+# Places that read as German-adjacent but are not in Germany — guards against
+# a naive substring match on shared names.
+NON_GERMAN_PLACES = {
+    "vienna", "wien", "austria", "österreich", "zurich", "zürich", "basel",
+    "geneva", "switzerland", "schweiz", "london", "uk", "united kingdom",
+    "amsterdam", "netherlands", "paris", "france", "madrid", "spain",
+    "warsaw", "poland", "prague", "czech", "lisbon", "portugal", "dublin",
+    "ireland", "stockholm", "sweden", "copenhagen", "denmark", "milan",
+    "italy", "brussels", "belgium", "luxembourg", "new york", "san francisco",
+    "usa", "united states", "canada", "india", "singapore", "australia",
+}
+
+
 @dataclass
 class JobFilterConfig:
     role_keywords: list[str] = field(default_factory=lambda: list(DEFAULT_ROLE_KEYWORDS))
@@ -61,6 +102,8 @@ class JobFilterConfig:
     )
     max_required_years: int = 3
     posted_within_days: int = 7
+    # Only keep postings located in Germany.
+    germany_only: bool = True
 
 
 @dataclass
@@ -94,6 +137,31 @@ def matched_skills(text: str, skills: list[str]) -> list[str]:
         if re.search(pattern, low):
             found.append(skill)
     return found
+
+
+def _mentions(text: str, places: set[str]) -> bool:
+    low = text.lower()
+    return any(
+        re.search(r"(?<![a-zäöüß])" + re.escape(p) + r"(?![a-zäöüß])", low)
+        for p in places
+    )
+
+
+def is_in_germany(location: str | None, country: str | None) -> bool:
+    """Decide whether a posting is located in Germany.
+
+    An explicit country code from the source wins. Otherwise the location text
+    is matched against German places, with a guard for nearby countries whose
+    names would otherwise slip through. A posting with no location at all is
+    rejected — an unplaceable role is not worth an application.
+    """
+    if country:
+        return country.upper() in {"DE", "DEU", "GERMANY"}
+    if not location:
+        return False
+    if _mentions(location, NON_GERMAN_PLACES):
+        return False
+    return _mentions(location, GERMAN_PLACES)
 
 
 def is_excluded_company(company: str, excluded: list[str]) -> bool:
@@ -134,12 +202,17 @@ def evaluate(
     skills: list[str],
     config: JobFilterConfig,
     now: datetime | None = None,
+    location: str | None = None,
+    country: str | None = None,
 ) -> FilterDecision:
     """Run every rule and return the first failing reason, or keep=True.
 
     `text` should be title + description + requirements concatenated, so skill
     and experience matching see the whole posting.
     """
+    if config.germany_only and not is_in_germany(location, country):
+        return FilterDecision(False, f"not located in Germany: {location or 'unknown'}")
+
     if is_excluded_company(company, config.excluded_companies):
         return FilterDecision(False, f"excluded company: {company}")
 

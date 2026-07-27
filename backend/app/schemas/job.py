@@ -36,6 +36,7 @@ class DiscoverRequest(BaseModel):
     max_required_years: int | None = Field(default=None, ge=0, le=20)
     posted_within_days: int | None = Field(default=None, ge=1, le=90)
     max_pages: int = Field(default=3, ge=1, le=10)
+    germany_only: bool | None = None
 
 
 class DiscoverResponse(BaseModel):
@@ -43,6 +44,8 @@ class DiscoverResponse(BaseModel):
     kept: int
     new_postings: int
     new_matches: int
+    per_source: dict[str, int] = Field(default_factory=dict)
+    failed_sources: list[str] = Field(default_factory=list)
 
 
 class ScoreRequest(BaseModel):
