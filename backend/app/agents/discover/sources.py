@@ -373,3 +373,93 @@ class SmartRecruitersSource:
             country=(place.get("country") or "de").upper(),
             raw=item,
         )
+
+
+class WorkdaySource:
+    """Workday-hosted career sites via the public CXS endpoint each site's own
+    frontend calls. Configured as host:tenant:site triples, e.g.
+    ``nvidia.wd5:nvidia:NVIDIAExternalCareerSite`` — covers the many large
+    employers (AG/SE scale) that publish only through Workday.
+
+    The list endpoint carries no country field; the location is embedded in the
+    posting's URL path (``/job/Germany-Remote/...``) and extracted from there,
+    so the Germany filter still applies downstream.
+    """
+
+    name = "workday"
+
+    def __init__(self, triples: list[str], timeout: float = 25.0) -> None:
+        # "host:tenant:site" — host without the myworkdayjobs.com suffix.
+        self.triples = triples
+        self._timeout = timeout
+
+    def fetch(self, *, within_days: int = 7, max_pages: int = 2) -> list[NormalizedPosting]:
+        postings: list[NormalizedPosting] = []
+        with httpx.Client(timeout=self._timeout) as client:
+            for triple in self.triples:
+                try:
+                    host, tenant, site = triple.split(":")
+                except ValueError:
+                    continue
+                base = f"https://{host}.myworkdayjobs.com"
+                for page in range(max_pages):
+                    try:
+                        response = client.post(
+                            f"{base}/wday/cxs/{tenant}/{site}/jobs",
+                            json={
+                                "appliedFacets": {},
+                                "limit": 20,
+                                "offset": page * 20,
+                                "searchText": "germany",
+                            },
+                        )
+                        response.raise_for_status()
+                    except httpx.HTTPError:
+                        break  # one broken tenant must not stop the rest
+                    items = response.json().get("jobPostings") or []
+                    if not items:
+                        break
+                    for item in items:
+                        posting = self._normalize(base, site, tenant, item)
+                        if posting.external_id:
+                            postings.append(posting)
+        return postings
+
+    @staticmethod
+    def _parse_posted(text: str) -> datetime | None:
+        """'Posted Today' / 'Posted Yesterday' / 'Posted 26 Days Ago' -> date."""
+        from datetime import timedelta
+
+        if not text:
+            return None
+        low = text.lower()
+        now = datetime.now(timezone.utc)
+        if "today" in low:
+            return now
+        if "yesterday" in low:
+            return now - timedelta(days=1)
+        match = re.search(r"(\d+)\+?\s*day", low)
+        if match:
+            return now - timedelta(days=int(match.group(1)))
+        return None
+
+    def _normalize(self, base: str, site: str, tenant: str, item: dict) -> NormalizedPosting:
+        path = item.get("externalPath", "")
+        # Path shape: /job/<Location>/<Title>_<Req-ID>
+        segments = [s for s in path.split("/") if s]
+        location = segments[1].replace("-", " ") if len(segments) >= 2 else None
+        req_id = (item.get("bulletFields") or [None])[0] or path
+
+        return NormalizedPosting(
+            source=self.name,
+            external_id=f"{tenant}:{req_id}",
+            url=f"{base}/{site}{path}",
+            title=item.get("title", ""),
+            company=tenant.replace("_", " ").title(),
+            location=location,
+            is_remote="remote" in (location or "").lower(),
+            description=item.get("title", ""),
+            tags=[],
+            posted_at=self._parse_posted(item.get("postedOn", "")),
+            raw=item,
+        )

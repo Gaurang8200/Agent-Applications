@@ -53,6 +53,8 @@ class Settings(BaseSettings):
     greenhouse_boards: str = "celonis,n26,getyourguide,contentful"
     lever_handles: str = "wefox,flixbus"
     smartrecruiters_companies: str = "BoschGroup"
+    # Workday career sites as host:tenant:site triples, comma separated.
+    workday_sites: str = "nvidia.wd5:nvidia:NVIDIAExternalCareerSite"
 
     jwt_secret: str = Field(min_length=32)
     jwt_algorithm: str = "HS256"
@@ -81,6 +83,10 @@ class Settings(BaseSettings):
     @property
     def smartrecruiters_company_list(self) -> list[str]:
         return self._csv(self.smartrecruiters_companies)
+
+    @property
+    def workday_site_list(self) -> list[str]:
+        return self._csv(self.workday_sites)
 
     @property
     def applications_path(self) -> "Path":

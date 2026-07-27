@@ -142,6 +142,15 @@ export const api = {
   getApplication: (id: string) =>
     request<ApplicationDetail>(`/api/v1/tracker/applications/${id}`),
 
+  prepareFromUrl: (url: string, company?: string) =>
+    request<{ company: string; cv_pdf: string; anschreiben_pdf: string; compliant: boolean }>(
+      "/api/v1/applications/prepare-from-url",
+      {
+        method: "POST",
+        body: JSON.stringify({ url, company: company || null }),
+      },
+    ),
+
   transitionApplication: (id: string, status: ApplicationStatus, message?: string) =>
     request<ApplicationDetail>(`/api/v1/tracker/applications/${id}/transition`, {
       method: "POST",

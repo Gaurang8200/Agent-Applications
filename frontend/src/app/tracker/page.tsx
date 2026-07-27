@@ -56,6 +56,8 @@ export default function TrackerPage() {
   const [matches, setMatches] = useState<JobMatch[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pasteUrl, setPasteUrl] = useState("");
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -134,6 +136,37 @@ export default function TrackerPage() {
             {error}
           </p>
         )}
+
+        {notice && (
+          <p className="mb-6 rounded-md bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-950 dark:text-green-300">
+            {notice}
+          </p>
+        )}
+
+        <div className="mb-4 flex flex-wrap gap-2">
+          <input
+            type="url"
+            value={pasteUrl}
+            onChange={(event) => setPasteUrl(event.target.value)}
+            placeholder="Paste any job link — the agent tailors CV + Anschreiben for it"
+            className="min-w-0 flex-1 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:bg-neutral-900 dark:focus:border-neutral-100"
+          />
+          <button
+            onClick={() =>
+              run(async () => {
+                const prepared = await api.prepareFromUrl(pasteUrl.trim());
+                setPasteUrl("");
+                setNotice(
+                  `Prepared for ${prepared.company} — PDFs saved to your AgentApplications folder. Review the card, then submit yourself.`,
+                );
+              })
+            }
+            disabled={busy || !pasteUrl.trim()}
+            className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
+          >
+            Prepare
+          </button>
+        </div>
 
         <div className="mb-8 flex flex-wrap gap-3">
           <button
