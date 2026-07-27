@@ -5,10 +5,17 @@ from sqlalchemy.orm import Session
 
 from app.agents.discover.filters import JobFilterConfig
 from app.agents.discover.service import discover_jobs
+from app.agents.match_service import score_pending
 from app.api.deps import get_current_profile
 from app.db.session import get_db
 from app.models import Match, Profile
-from app.schemas.job import DiscoverRequest, DiscoverResponse, MatchOut
+from app.schemas.job import (
+    DiscoverRequest,
+    DiscoverResponse,
+    MatchOut,
+    ScoreRequest,
+    ScoreResponse,
+)
 
 router = APIRouter(tags=["jobs"])
 
@@ -54,6 +61,26 @@ def discover(
         ) from exc
 
     return DiscoverResponse(**summary.__dict__)
+
+
+@router.post("/jobs/score", response_model=ScoreResponse)
+def score_matches(
+    payload: ScoreRequest = ScoreRequest(),
+    profile: Profile = Depends(get_current_profile),
+    db: Session = Depends(get_db),
+) -> ScoreResponse:
+    """Score discovered matches for real fit, replacing the keyword placeholder.
+
+    Skips already-scored matches unless `rescore` is set, so calling this
+    repeatedly is cheap and converges on a fully scored queue.
+    """
+    try:
+        summary = score_pending(
+            db, profile, limit=payload.limit, rescore=payload.rescore
+        )
+    except RuntimeError as exc:  # missing API key
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+    return ScoreResponse(**summary.__dict__)
 
 
 @router.get("/jobs/matches", response_model=list[MatchOut])

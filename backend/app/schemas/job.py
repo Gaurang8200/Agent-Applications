@@ -43,3 +43,16 @@ class DiscoverResponse(BaseModel):
     kept: int
     new_postings: int
     new_matches: int
+
+
+class ScoreRequest(BaseModel):
+    # Capped so one call cannot fan out into an unbounded number of API calls.
+    limit: int = Field(default=10, ge=1, le=50)
+    rescore: bool = False
+
+
+class ScoreResponse(BaseModel):
+    scored: int
+    skipped: int
+    failed: int
+    remaining: int
