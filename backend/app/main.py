@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import (
     applications,
     auth,
+    autopilot,
     docx_applications,
     jobs,
     profile,
@@ -15,6 +16,7 @@ from app.api.routes import (
     tracker,
 )
 from app.core.config import get_settings
+from app.services import scheduler
 from app.services.storage import ensure_bucket
 
 settings = get_settings()
@@ -33,7 +35,13 @@ async def lifespan(app: FastAPI):
             "ANTHROPIC_API_KEY is not set — resume parsing will use the heuristic "
             "fallback. Get a key at https://console.anthropic.com/settings/keys"
         )
-    yield
+    scheduler.start()
+    if settings.allowed_email_list:
+        logger.info("Access restricted to %s", ", ".join(settings.allowed_email_list))
+    try:
+        yield
+    finally:
+        await scheduler.stop()
 
 
 app = FastAPI(
@@ -59,6 +67,7 @@ app.include_router(jobs.router, prefix="/api/v1")
 app.include_router(applications.router, prefix="/api/v1")
 app.include_router(docx_applications.router, prefix="/api/v1")
 app.include_router(tracker.router, prefix="/api/v1")
+app.include_router(autopilot.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["meta"])

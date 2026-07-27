@@ -3,16 +3,32 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.core.config import get_settings
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.session import get_db
 from app.models import User
 from app.schemas.auth import Token, UserLogin, UserOut, UserRegister
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+settings = get_settings()
+
+
+def _require_allowed(email: str) -> None:
+    """Refuse addresses outside the allowlist.
+
+    This is a single-user tool; once deployed, open registration would let
+    anyone who can reach the API create an account.
+    """
+    if not settings.email_allowed(email):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This deployment is restricted to its owner's account.",
+        )
 
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 def register(payload: UserRegister, db: Session = Depends(get_db)) -> Token:
+    _require_allowed(payload.email)
     existing = db.scalar(select(User).where(User.email == payload.email.lower()))
     if existing is not None:
         raise HTTPException(
@@ -33,6 +49,7 @@ def register(payload: UserRegister, db: Session = Depends(get_db)) -> Token:
 
 @router.post("/login", response_model=Token)
 def login(payload: UserLogin, db: Session = Depends(get_db)) -> Token:
+    _require_allowed(payload.email)
     user = db.scalar(select(User).where(User.email == payload.email.lower()))
     # Same message for unknown email and wrong password — don't leak which
     # addresses are registered.
