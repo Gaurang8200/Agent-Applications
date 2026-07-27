@@ -1,4 +1,9 @@
 import type {
+  Application,
+  ApplicationDetail,
+  ApplicationStatus,
+  Board,
+  JobMatch,
   Profile,
   Resume,
   ResumeUploadResponse,
@@ -115,4 +120,31 @@ export const api = {
       body: form,
     });
   },
+
+  listMatches: () => request<JobMatch[]>("/api/v1/jobs/matches"),
+
+  discover: () => request<unknown>("/api/v1/discover", { method: "POST", body: "{}" }),
+
+  scoreMatches: (limit = 10) =>
+    request<unknown>("/api/v1/jobs/score", {
+      method: "POST",
+      body: JSON.stringify({ limit }),
+    }),
+
+  getBoard: () => request<Board>("/api/v1/tracker/board"),
+
+  trackApplication: (matchId: string) =>
+    request<Application>("/api/v1/tracker/applications", {
+      method: "POST",
+      body: JSON.stringify({ match_id: matchId }),
+    }),
+
+  getApplication: (id: string) =>
+    request<ApplicationDetail>(`/api/v1/tracker/applications/${id}`),
+
+  transitionApplication: (id: string, status: ApplicationStatus, message?: string) =>
+    request<ApplicationDetail>(`/api/v1/tracker/applications/${id}/transition`, {
+      method: "POST",
+      body: JSON.stringify({ status, message: message ?? null }),
+    }),
 };

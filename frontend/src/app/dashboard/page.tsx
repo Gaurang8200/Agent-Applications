@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 
@@ -111,12 +112,20 @@ export default function DashboardPage() {
           <h1 className="font-semibold tracking-tight">Agent Applications</h1>
           <p className="text-xs text-neutral-500">{user.email}</p>
         </div>
-        <button
-          onClick={logout}
-          className="text-sm text-neutral-600 underline underline-offset-4 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-        >
-          Sign out
-        </button>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/tracker"
+            className="text-sm text-neutral-600 underline underline-offset-4 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+          >
+            Applications
+          </Link>
+          <button
+            onClick={logout}
+            className="text-sm text-neutral-600 underline underline-offset-4 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+          >
+            Sign out
+          </button>
+        </div>
       </header>
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-10">

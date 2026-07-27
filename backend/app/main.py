@@ -4,7 +4,16 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import applications, auth, docx_applications, jobs, profile, resumes, tailor
+from app.api.routes import (
+    applications,
+    auth,
+    docx_applications,
+    jobs,
+    profile,
+    resumes,
+    tailor,
+    tracker,
+)
 from app.core.config import get_settings
 from app.services.storage import ensure_bucket
 
@@ -49,6 +58,7 @@ app.include_router(tailor.router, prefix="/api/v1")
 app.include_router(jobs.router, prefix="/api/v1")
 app.include_router(applications.router, prefix="/api/v1")
 app.include_router(docx_applications.router, prefix="/api/v1")
+app.include_router(tracker.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["meta"])
