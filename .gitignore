@@ -50,3 +50,8 @@ AgentApplications/
 # --- iCloud sync artifacts ---
 .icloud
 *.icloud
+
+# Local AI tooling config — kept on disk, not published
+CLAUDE.md
+*/CLAUDE.md
+.claude/
