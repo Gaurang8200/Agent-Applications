@@ -97,6 +97,15 @@ export const api = {
 
   me: () => request<User>("/api/v1/auth/me"),
 
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<void>("/api/v1/auth/password", {
+      method: "POST",
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    }),
+
   getProfile: () => request<Profile>("/api/v1/profile"),
 
   updateProfile: (patch: Partial<Profile>) =>

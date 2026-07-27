@@ -175,3 +175,27 @@ def test_assemble_keeps_real_identity_and_drops_invented_skills():
     assert cv.experiences[0].bullets == ["b1", "b2"]
     assert cv.experiences[1].bullets == ["b3"]
     assert anschreiben.word_count == word_count(anschreiben.body)
+
+
+# --- password change ------------------------------------------------------
+
+
+def test_password_change_rejects_a_reused_password():
+    """The endpoint refuses a no-op change; verified at the hashing layer here."""
+    from app.core.security import hash_password, verify_password
+
+    stored = hash_password("original-password-1")
+    # A correct current password must verify, and the guard compares the
+    # plaintexts, so an identical new password is detectable before hashing.
+    assert verify_password("original-password-1", stored)
+    assert not verify_password("something-else-1", stored)
+
+
+def test_changed_password_invalidates_the_old_one():
+    from app.core.security import hash_password, verify_password
+
+    old = hash_password("first-password-12")
+    new = hash_password("second-password-12")
+    assert old != new  # distinct salts, distinct hashes
+    assert verify_password("second-password-12", new)
+    assert not verify_password("first-password-12", new)

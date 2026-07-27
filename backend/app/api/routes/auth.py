@@ -7,7 +7,7 @@ from app.core.config import get_settings
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.session import get_db
 from app.models import User
-from app.schemas.auth import Token, UserLogin, UserOut, UserRegister
+from app.schemas.auth import PasswordChange, Token, UserLogin, UserOut, UserRegister
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
@@ -64,3 +64,29 @@ def login(payload: UserLogin, db: Session = Depends(get_db)) -> Token:
 @router.get("/me", response_model=UserOut)
 def me(user: User = Depends(get_current_user)) -> User:
     return user
+
+
+@router.post("/password", status_code=status.HTTP_204_NO_CONTENT)
+def change_password(
+    payload: PasswordChange,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    """Change the signed-in user's password.
+
+    The current password is required, so a stolen session token alone cannot
+    lock the owner out of their own account.
+    """
+    if not verify_password(payload.current_password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Current password is incorrect.",
+        )
+    if payload.new_password == payload.current_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The new password must differ from the current one.",
+        )
+
+    user.hashed_password = hash_password(payload.new_password)
+    db.commit()
