@@ -104,3 +104,24 @@ def test_set_paragraph_text_preserves_run_count_shape():
     set_paragraph_text(p, "new text")
     assert p.text == "new text"
     assert p.runs[0].bold is True  # formatting of the first run survives
+
+
+# --- filename collision guard --------------------------------------------
+
+
+def test_role_slug_disambiguates_two_roles_at_one_company():
+    from app.services.docx_prepare import _role_slug
+
+    a = _role_slug("Senior Software Developer (m/w/d) - Java")
+    b = _role_slug("Werkstudent Machine Learning")
+    assert a and b and a != b
+    # Filesystem-safe: no punctuation or spaces survive.
+    for slug in (a, b):
+        assert all(c.isalnum() or c == "_" for c in slug)
+
+
+def test_role_slug_empty_without_a_title():
+    from app.services.docx_prepare import _role_slug
+
+    assert _role_slug(None) == ""
+    assert _role_slug("") == ""

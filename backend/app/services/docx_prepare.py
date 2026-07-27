@@ -13,6 +13,7 @@ Source of truth is the user's real CV and Anschreiben files. The flow:
    APPLICATIONS_DIR/<Company>/.
 """
 
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -47,6 +48,20 @@ class PreparedFiles:
     anschreiben_docx: str
     cv_pdf: str
     anschreiben_pdf: str
+
+
+def _role_slug(job_title: str | None) -> str:
+    """A short filesystem-safe fragment identifying the role.
+
+    Two openings at the same company would otherwise write to the same
+    filenames and the second would silently overwrite the first, so the role
+    goes into the name too.
+    """
+    if not job_title:
+        return ""
+    cleaned = re.sub(r"[^A-Za-z0-9 ]+", " ", job_title)
+    words = [w for w in cleaned.split() if w][:4]
+    return "_".join(words)
 
 
 def _find_soffice() -> str:
@@ -149,14 +164,19 @@ def write_tailored_files(
     anschreiben_template: Path,
     result: TailorResult,
     company: str,
+    job_title: str | None = None,
 ) -> PreparedFiles:
     """Apply the tailored text into copies of the user's templates and render PDFs."""
     safe = safe_company_name(company)
     outdir = settings.applications_path / safe
     outdir.mkdir(parents=True, exist_ok=True)
 
-    cv_out = outdir / f"CV_{safe}.docx".replace(" ", "_")
-    letter_out = outdir / f"Anschreiben_{safe}.docx".replace(" ", "_")
+    # Include the role so a second opening at the same company does not
+    # overwrite the first.
+    role = _role_slug(job_title)
+    stem = f"{safe}_{role}" if role else safe
+    cv_out = outdir / f"CV_{stem}.docx".replace(" ", "_")
+    letter_out = outdir / f"Anschreiben_{stem}.docx".replace(" ", "_")
     shutil.copyfile(cv_template, cv_out)
     shutil.copyfile(anschreiben_template, letter_out)
 
@@ -236,6 +256,7 @@ def prepare_application(
             anschreiben_template=anschreiben_template,
             result=result,
             company=company,
+            job_title=job_title,
         )
         bullets = [b for exp in result.cv.experiences for b in exp.bullets]
         problems = line_violations(measure_bullets(files.cv_pdf, bullets))
