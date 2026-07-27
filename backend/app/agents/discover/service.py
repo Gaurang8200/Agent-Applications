@@ -21,6 +21,7 @@ from app.agents.discover.sources import (
     LeverSource,
     NormalizedPosting,
     SmartRecruitersSource,
+    WorkdaySource,
 )
 from app.core.config import get_settings
 from app.models import JobPosting, Match, Profile
@@ -54,6 +55,8 @@ def default_sources() -> list[JobSource]:
         sources.append(LeverSource(settings.lever_handle_list))
     if settings.smartrecruiters_company_list:
         sources.append(SmartRecruitersSource(settings.smartrecruiters_company_list))
+    if settings.workday_site_list:
+        sources.append(WorkdaySource(settings.workday_site_list))
     return sources
 
 
