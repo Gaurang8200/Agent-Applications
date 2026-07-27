@@ -41,6 +41,13 @@ class Settings(BaseSettings):
     # Where generated application PDFs are saved locally, one folder per company.
     applications_dir: str = "~/AgentApplications"
 
+    # The user's own CV / Anschreiben .docx templates (kept out of git — they
+    # contain personal data). The docx flow edits copies of these in place.
+    cv_template_path: str = "../samples/Gourangkumar_Lebenslauf_DE.docx"
+    anschreiben_template_path: str = "../samples/Gourangkumar_Anschreiben.docx"
+    # LibreOffice binary for .docx -> PDF; auto-detected when empty.
+    soffice_path: str = ""
+
     jwt_secret: str = Field(min_length=32)
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60

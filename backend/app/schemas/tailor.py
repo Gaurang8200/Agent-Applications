@@ -38,6 +38,11 @@ class TailoringConstraints(BaseModel):
     # fraction is allowed, never more than the sample.
     anschreiben_word_tolerance: float = 0.05
 
+    # When set, the Anschreiben body must have exactly this many paragraphs —
+    # used by the docx flow, where each paragraph fills one slot in the user's
+    # own letter template.
+    anschreiben_paragraphs: int | None = None
+
 
 class TailoredExperience(BaseModel):
     """One work experience with rewritten bullets. Identity fields are copied
@@ -67,6 +72,12 @@ class TailoredAnschreiben(BaseModel):
 
     body: str
     word_count: int = 0
+    # Job-specific subject line, e.g. "Bewerbung als Backend Engineer (m/w/d)".
+    subject: str | None = None
+
+    @property
+    def paragraphs(self) -> list[str]:
+        return [p.strip() for p in self.body.split("\n\n") if p.strip()]
 
 
 class RuleViolation(BaseModel):

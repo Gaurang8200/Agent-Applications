@@ -36,6 +36,10 @@ uploads/
 *.sqlite3
 *.db
 
+# Personal CV/Anschreiben templates and generated applications — never commit
+samples/
+AgentApplications/
+
 # --- Editors / OS ---
 .DS_Store
 .idea/

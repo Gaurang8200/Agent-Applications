@@ -94,9 +94,26 @@ def _build_schema(profile: Profile, constraints: TailoringConstraints) -> dict:
                     "additionalProperties": False,
                 },
             },
-            "anschreiben": {"type": "string"},
+            "anschreiben": {
+                "type": "string",
+                "description": "Body paragraphs only, separated by blank lines. "
+                "No greeting, no closing, no signature — those already exist in "
+                "the letter template.",
+            },
+            "anschreiben_subject": {
+                "type": "string",
+                "description": "Subject line for the letter, e.g. "
+                "'Bewerbung als Backend Engineer (m/w/d)'.",
+            },
         },
-        "required": ["headline", "summary", "skills", "experiences", "anschreiben"],
+        "required": [
+            "headline",
+            "summary",
+            "skills",
+            "experiences",
+            "anschreiben",
+            "anschreiben_subject",
+        ],
         "additionalProperties": False,
     }
 
@@ -149,6 +166,13 @@ def _call_model(
             min=constraints.bullet_min_chars, max=constraints.bullet_max_chars
         )
     )
+    if constraints.anschreiben_paragraphs:
+        user.append(
+            f"The Anschreiben body must be EXACTLY "
+            f"{constraints.anschreiben_paragraphs} paragraphs separated by blank "
+            "lines. Body only — the greeting, closing, and signature already "
+            "exist in the letter."
+        )
     if sample_anschreiben:
         user.append(
             f"\nSAMPLE ANSCHREIBEN (match its structure and length, in its "
@@ -218,7 +242,11 @@ def _assemble(
         experiences=experiences,
     )
     body = payload.get("anschreiben", "")
-    anschreiben = TailoredAnschreiben(body=body, word_count=tailor_rules.word_count(body))
+    anschreiben = TailoredAnschreiben(
+        body=body,
+        word_count=tailor_rules.word_count(body),
+        subject=payload.get("anschreiben_subject"),
+    )
     return cv, anschreiben
 
 
@@ -231,6 +259,7 @@ def tailor(
     constraints: TailoringConstraints | None = None,
     sample_anschreiben: str | None = None,
     max_passes: int = 2,
+    extra_correction: str | None = None,
 ) -> TailorResult:
     if not settings.llm_enabled:
         raise RuntimeError(
@@ -250,7 +279,9 @@ def tailor(
         tailor_rules.word_count(sample_anschreiben) if sample_anschreiben else None
     )
 
-    correction: str | None = None
+    # An externally observed problem (e.g. rendered line counts from a previous
+    # PDF) seeds the first pass; internal rule violations drive later passes.
+    correction: str | None = extra_correction
     cv = anschreiben = None
     violations = []
     for _ in range(max_passes):
