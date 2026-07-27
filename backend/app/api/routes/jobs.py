@@ -30,6 +30,8 @@ def _config_from_request(payload: DiscoverRequest) -> JobFilterConfig:
         config.max_required_years = payload.max_required_years
     if payload.posted_within_days is not None:
         config.posted_within_days = payload.posted_within_days
+    if payload.germany_only is not None:
+        config.germany_only = payload.germany_only
     return config
 
 
