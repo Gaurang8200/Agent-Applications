@@ -17,7 +17,20 @@ which is the scarcest resource in this project.
 - Code, commit messages, and security warnings are written normally — this rule
   is about chat prose only.
 
-Target: under ~10 lines per turn unless the user asks for detail.
+**Budget: 95% of tokens go to doing the work, 5% to talking about it.**
+Target under 5 lines per turn. A turn that ran tools should usually be 1–3
+lines: the result, and the next decision if there is one.
+
+Also cut, aggressively:
+- Plans and step lists before acting. Just act; the tool calls show the plan.
+- Narrating what a command will do before running it, or what it did after.
+- Re-listing files changed, tests passed, or state the tool output already showed.
+- Offering menus of next steps. Pick the obvious one and do it.
+- Restating the user's request back to them.
+- Apologies, hedges, and transitions ("Now let me…", "Great, that worked!").
+
+Long output is only for: a real decision the user must make, a security issue,
+or something they explicitly asked to have explained.
 
 ## Stack
 
