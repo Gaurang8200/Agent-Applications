@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 
 import { ApiError, api } from "@/lib/api";
+import ChangePassword from "@/components/ChangePassword";
 import { useAuth } from "@/lib/auth-context";
 import type { ParsedResume, Profile, Resume } from "@/lib/types";
 
@@ -250,6 +251,10 @@ export default function DashboardPage() {
             </div>
           </Section>
         )}
+
+        <Section title="Account" description={user.email}>
+          <ChangePassword />
+        </Section>
 
         <Section title="Profile" description="What the agent will use to match and tailor.">
           {profile ? (

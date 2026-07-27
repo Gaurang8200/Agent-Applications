@@ -46,10 +46,20 @@ RESUME_SCHEMA = {
             "description": "Professional title line, e.g. 'Senior Backend Engineer'",
         },
         "summary": {"type": ["string", "null"]},
+        # Structured outputs reject `additionalProperties` as a schema, so the
+        # link kinds are declared explicitly rather than as an open map.
         "links": {
             "type": "object",
-            "description": "Keys such as linkedin, github, portfolio",
-            "additionalProperties": {"type": "string"},
+            # Plain strings, empty when absent: nullable types count toward a
+            # schema-wide union limit and four more would exceed it.
+            "properties": {
+                "linkedin": {"type": "string"},
+                "github": {"type": "string"},
+                "portfolio": {"type": "string"},
+                "website": {"type": "string"},
+            },
+            "required": ["linkedin", "github", "portfolio", "website"],
+            "additionalProperties": False,
         },
         "work_experience": {
             "type": "array",
@@ -171,7 +181,9 @@ def _parse_with_claude(raw_text: str) -> ParsedResume:
         location=payload.get("location"),
         headline=payload.get("headline"),
         summary=payload.get("summary"),
-        links=payload.get("links") or {},
+        # The schema requires every link key, so absent ones arrive as null and
+        # would otherwise be stored as empty entries.
+        links={k: v for k, v in (payload.get("links") or {}).items() if v},
         extraction_method="llm",
     )
 
