@@ -56,6 +56,20 @@ class Settings(BaseSettings):
     # Workday career sites as host:tenant:site triples, comma separated.
     workday_sites: str = "nvidia.wd5:nvidia:NVIDIAExternalCareerSite"
 
+    # Comma-separated allowlist of addresses permitted to register or sign in.
+    # Empty means open, which is fine locally; production sets one address.
+    allowed_emails: str = ""
+
+    # --- Autonomous loop ---
+    # Off by default; the loop spends API budget, so it is opt-in.
+    autopilot_enabled: bool = False
+    autopilot_interval_minutes: int = 180
+    # Per-cycle caps so one run cannot fan out without bound.
+    autopilot_score_limit: int = 15
+    autopilot_prepare_limit: int = 3
+    # Only prepare documents for matches judged at least this good.
+    autopilot_min_score: float = 60.0
+
     jwt_secret: str = Field(min_length=32)
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
@@ -87,6 +101,14 @@ class Settings(BaseSettings):
     @property
     def workday_site_list(self) -> list[str]:
         return self._csv(self.workday_sites)
+
+    @property
+    def allowed_email_list(self) -> list[str]:
+        return [e.lower() for e in self._csv(self.allowed_emails)]
+
+    def email_allowed(self, email: str) -> bool:
+        allowed = self.allowed_email_list
+        return not allowed or email.lower() in allowed
 
     @property
     def applications_path(self) -> "Path":
