@@ -96,3 +96,71 @@ export interface ResumeUploadResponse {
   resume: Resume;
   parsed: ParsedResume | null;
 }
+
+export interface JobPosting {
+  id: string;
+  source: string;
+  url: string;
+  title: string;
+  company: string;
+  location: string | null;
+  is_remote: boolean;
+  description: string | null;
+  posted_at: string | null;
+}
+
+export interface JobMatch {
+  id: string;
+  final_score: number;
+  matched_skills: string[];
+  missing_skills: string[];
+  status: string;
+  reasoning: string | null;
+  job_posting: JobPosting;
+  created_at: string;
+}
+
+/** Mirrors APPLICATION_STATUSES in the backend model. */
+export type ApplicationStatus =
+  | "draft"
+  | "tailoring"
+  | "prefilling"
+  | "ready_for_review"
+  | "submitted"
+  | "acknowledged"
+  | "interviewing"
+  | "offer"
+  | "rejected"
+  | "withdrawn";
+
+export interface ApplicationEvent {
+  id: string;
+  event_type: string;
+  actor: "agent" | "user" | "system";
+  message: string | null;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface Application {
+  id: string;
+  status: ApplicationStatus;
+  job_posting: JobPosting;
+  cover_letter: string | null;
+  cv_local_path: string | null;
+  cover_letter_local_path: string | null;
+  submitted_at: string | null;
+  approved_by_user_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApplicationDetail extends Application {
+  events: ApplicationEvent[];
+}
+
+export interface Board {
+  counts: Record<string, number>;
+  applications: Application[];
+}

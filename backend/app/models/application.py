@@ -1,11 +1,15 @@
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDMixin
+
+if TYPE_CHECKING:
+    from app.models.job import JobPosting
 
 # The agent may advance an application as far as `ready_for_review`. Only an
 # explicit user action moves it to `submitted` — never the agent.
@@ -40,6 +44,11 @@ class Application(Base, UUIDMixin, TimestampMixin):
     tailored_resume: Mapped[dict | None] = mapped_column(JSONB)
     tailored_resume_s3_key: Mapped[str | None] = mapped_column(String(1000))
     cover_letter: Mapped[str | None] = mapped_column(Text)
+    cover_letter_s3_key: Mapped[str | None] = mapped_column(String(1000))
+
+    # Paths on the user's own machine, under APPLICATIONS_DIR/<Company>/.
+    cv_local_path: Mapped[str | None] = mapped_column(String(1000))
+    cover_letter_local_path: Mapped[str | None] = mapped_column(String(1000))
 
     # Field values the prefill agent staged, awaiting user review.
     prefill_payload: Mapped[dict | None] = mapped_column(JSONB)
@@ -50,6 +59,8 @@ class Application(Base, UUIDMixin, TimestampMixin):
     approved_by_user_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     notes: Mapped[str | None] = mapped_column(Text)
+
+    job_posting: Mapped["JobPosting"] = relationship(lazy="joined")
 
     events: Mapped[list["ApplicationEvent"]] = relationship(
         back_populates="application",

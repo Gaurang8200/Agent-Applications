@@ -11,4 +11,8 @@ if command -v brew >/dev/null 2>&1; then
   export DYLD_FALLBACK_LIBRARY_PATH="$(brew --prefix)/lib${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
 fi
 
+# uvicorn resolves `app.main` against the working directory, so run from the
+# backend root regardless of where this script was invoked from.
+cd "$here"
+
 exec "$here/.venv/bin/uvicorn" app.main:app "$@"
