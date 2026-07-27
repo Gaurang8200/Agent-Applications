@@ -184,9 +184,13 @@ def _call_model(
             f"the full result again:\n{correction}"
         )
 
-    response = client.messages.create(
+    # Streamed: at this max_tokens the SDK refuses a non-streaming request,
+    # since a slow generation would outlive the HTTP timeout.
+    with client.messages.stream(
         model=settings.anthropic_model,
-        max_tokens=16000,
+        # Generous: adaptive thinking shares this budget with the JSON body, and
+        # a truncated body is unrecoverable (see the max_tokens check below).
+        max_tokens=32000,
         thinking={"type": "adaptive"},
         output_config={
             "effort": "high",
@@ -194,11 +198,27 @@ def _call_model(
         },
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": "\n".join(user)}],
-    )
+    ) as stream:
+        response = stream.get_final_message()
+
     if response.stop_reason == "refusal":
         raise RuntimeError("Tailoring was declined by the safety system.")
+    if response.stop_reason == "max_tokens":
+        # The JSON body was cut mid-string, so parsing it would fail with an
+        # opaque "unterminated string" error. Say what actually happened.
+        raise RuntimeError(
+            "Tailoring ran out of output budget before finishing the document. "
+            "Raise max_tokens or reduce the number of bullets requested."
+        )
+
     text = next(b.text for b in response.content if b.type == "text")
-    return json.loads(text)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"Tailoring returned malformed JSON ({exc}). This usually means the "
+            "response was truncated."
+        ) from exc
 
 
 def _assemble(
